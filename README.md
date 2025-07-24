@@ -81,11 +81,13 @@ http://localhost:8189
 
 ## API эндпоинты
 
-POST - /auth - Вход: возвращает accessToken и refreshToken
-POST - /registration - Регистрация нового пользователя
-POST - /refresh - Обновление accessToken по refreshToken
+POST
+- /auth - Вход: возвращает accessToken и refreshToken
+- /registration - Регистрация нового пользователя
+- /refresh - Обновление accessToken по refreshToken
 
-GET - /info - Получение информации о текущем пользователе 
+GET
+- /info - Получение информации о текущем пользователе 
 
 ## Дополнительная информация
 
