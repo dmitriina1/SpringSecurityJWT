@@ -26,23 +26,39 @@ public class AuthService {
 
     public ResponseEntity<?> createAuthToken(@RequestBody JwtRequest authRequest) {
         try {
-            authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(authRequest.getUsername(), authRequest.getPassword()));
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(authRequest.getLogin(), authRequest.getPassword())
+            );
         } catch (BadCredentialsException e) {
             return new ResponseEntity<>(new AppError(HttpStatus.UNAUTHORIZED.value(), "Неправильный логин или пароль"), HttpStatus.UNAUTHORIZED);
         }
-        UserDetails userDetails = userService.loadUserByUsername(authRequest.getUsername());
-        String token = jwtTokenUtils.generateToken(userDetails);
-        return ResponseEntity.ok(new JwtResponse(token));
+
+        UserDetails userDetails = userService.loadUserByUsername(authRequest.getLogin());
+        String accessToken = jwtTokenUtils.generateAccessToken(userDetails);
+        String refreshToken = jwtTokenUtils.generateRefreshToken(userDetails);
+
+        return ResponseEntity.ok(new JwtResponse(accessToken, refreshToken));
     }
 
     public ResponseEntity<?> createNewUser(@RequestBody RegistrationUserDto registrationUserDto) {
         if (!registrationUserDto.getPassword().equals(registrationUserDto.getConfirmPassword())) {
             return new ResponseEntity<>(new AppError(HttpStatus.BAD_REQUEST.value(), "Пароли не совпадают"), HttpStatus.BAD_REQUEST);
         }
-        if (userService.findByUsername(registrationUserDto.getUsername()).isPresent()) {
+        if (userService.findByLogin(registrationUserDto.getLogin()).isPresent()) {
             return new ResponseEntity<>(new AppError(HttpStatus.BAD_REQUEST.value(), "Пользователь с указанным именем уже существует"), HttpStatus.BAD_REQUEST);
         }
         User user = userService.createNewUser(registrationUserDto);
-        return ResponseEntity.ok(new UserDto(user.getId(), user.getUsername(), user.getEmail()));
+        return ResponseEntity.ok(new UserDto(user.getId(), user.getLogin(), user.getEmail()));
+    }
+
+    public ResponseEntity<?> refreshToken(String refreshToken) {
+        if (jwtTokenUtils.validateToken(refreshToken)) {
+            String login = jwtTokenUtils.getUsername(refreshToken);
+            UserDetails userDetails = userService.loadUserByUsername(login);
+            String newAccessToken = jwtTokenUtils.generateAccessToken(userDetails);
+            return ResponseEntity.ok(new JwtResponse(newAccessToken, refreshToken));
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid or expired refresh token");
+        }
     }
 }
